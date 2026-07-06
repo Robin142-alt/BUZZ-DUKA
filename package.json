@@ -1,0 +1,13 @@
+{
+  "name": "buzz-duka",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {},
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  }
+}

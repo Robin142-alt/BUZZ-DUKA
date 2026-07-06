@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id               String   @id
+  server_id        String?  @unique
+  business_name    String
+  business_category String?
+  location         String?
+  owner_user_id    String?
+  status           String   @default("active")
+  created_at       DateTime
+  updated_at       DateTime
+  idempotency_key  String?  @unique
+
+  users            User[]
+  devices          Device[]
+  categories       Category[]
+  products         Product[]
+  stock_movements  StockMovement[]
+  sales            Sale[]
+  debts            Debt[]
+  expenses         Expense[]
+  licenses         License[]
+  activity_logs    ActivityLog[]
+  price_histories  PriceHistory[]
+}
+
+model User {
+  id               String   @id
+  server_id        String?  @unique
+  business_id      String
+  full_name        String
+  phone            String?
+  email            String?
+  password_hash    String?
+  role             String
+  status           String   @default("active")
+  created_at       DateTime
+  updated_at       DateTime
+  idempotency_key  String?  @unique
+
+  business         Business @relation(fields: [business_id], references: [id])
+}
+
+model Device {
+  id               String   @id
+  server_id        String?  @unique
+  business_id      String
+  user_id          String?
+  device_name      String
+  device_fingerprint String
+  status           String   @default("active")
+  is_sales_enabled Int      @default(0)
+  last_seen_at     DateTime?
+  created_at       DateTime
+  updated_at       DateTime
+  idempotency_key  String?  @unique
+
+  business         Business @relation(fields: [business_id], references: [id])
+}
+
+model Category {
+  id               String   @id
+  server_id        String?  @unique
+  business_id      String
+  name             String
+  is_active        Int      @default(1)
+  created_at       DateTime
+  updated_at       DateTime
+  idempotency_key  String?  @unique
+
+  business         Business @relation(fields: [business_id], references: [id])
+  products         Product[]
+
+  @@unique([business_id, name])
+}
+
+model Product {
+  id                          String   @id
+  server_id                   String?  @unique
+  business_id                 String
+  category_id                 String?
+  product_name                String
+  sku                         String?
+  current_stock_quantity      Int      @default(0)
+  low_stock_level             Int      @default(0)
+  default_buying_price_cents  Int      @default(0)
+  current_selling_price_cents Int      @default(0)
+  average_unit_cost_cents     Int      @default(0)
+  stock_value_cents           Int      @default(0)
+  is_active                   Int      @default(1)
+  created_at                  DateTime
+  updated_at                  DateTime
+  idempotency_key             String?  @unique
+
+  business                    Business  @relation(fields: [business_id], references: [id])
+  category                    Category? @relation(fields: [category_id], references: [id])
+  stock_movements             StockMovement[]
+  sale_items                  SaleItem[]
+  price_histories             PriceHistory[]
+}
+
+model StockMovement {
+  id                       String   @id
+  server_id                String?  @unique
+  business_id              String
+  product_id               String
+  movement_type            String
+  quantity_change          Int
+  quantity_before          Int
+  quantity_after           Int
+  unit_cost_before_cents   Int      @default(0)
+  unit_cost_after_cents    Int      @default(0)
+  stock_value_before_cents Int      @default(0)
+  stock_value_after_cents  Int      @default(0)
+  related_sale_id          String?
+  related_sale_item_id     String?
+  reason                   String?
+  created_by_user_id       String
+  device_id                String?
+  created_at               DateTime
+  updated_at               DateTime
+  idempotency_key          String?  @unique
+
+  business                 Business @relation(fields: [business_id], references: [id])
+  product                  Product  @relation(fields: [product_id], references: [id])
+}
+
+model Sale {
+  id                       String   @id
+  server_id                String?  @unique
+  business_id              String
+  customer_id              String?
+  total_amount_cents       Int
+  amount_paid_cents        Int
+  balance_due_cents        Int      @default(0)
+  payment_method           String
+  sale_status              String   @default("completed")
+  sold_by_user_id          String
+  device_id                String
+  created_at               DateTime
+  updated_at               DateTime
+  idempotency_key          String?  @unique
+
+  business                 Business   @relation(fields: [business_id], references: [id])
+  items                    SaleItem[]
+}
+
+model SaleItem {
+  id                       String   @id
+  server_id                String?  @unique
+  sale_id                  String
+  product_id               String
+  quantity                 Int
+  unit_price_cents         Int
+  unit_cost_cents          Int      @default(0)
+  subtotal_cents           Int
+  created_at               DateTime
+  updated_at               DateTime
+  idempotency_key          String?  @unique
+
+  sale                     Sale     @relation(fields: [sale_id], references: [id])
+  product                  Product  @relation(fields: [product_id], references: [id])
+}
+
+model Debt {
+  id                       String   @id
+  server_id                String?  @unique
+  business_id              String
+  customer_name            String
+  customer_phone           String?
+  original_amount_cents    Int
+  remaining_balance_cents  Int
+  related_sale_id          String?
+  status                   String   @default("unpaid")
+  due_date                 DateTime?
+  created_by_user_id       String
+  created_at               DateTime
+  updated_at               DateTime
+  idempotency_key          String?  @unique
+
+  business                 Business @relation(fields: [business_id], references: [id])
+}
+
+model Expense {
+  id                       String   @id
+  server_id                String?  @unique
+  business_id              String
+  category                 String
+  amount_cents             Int
+  description              String?
+  recorded_by_user_id      String
+  expense_date             DateTime
+  created_at               DateTime
+  updated_at               DateTime
+  idempotency_key          String?  @unique
+
+  business                 Business @relation(fields: [business_id], references: [id])
+}
+
+model License {
+  id               String   @id
+  server_id        String?  @unique
+  business_id      String
+  plan_tier        String   @default("smart")
+  is_active        Boolean  @default(true)
+  valid_from       DateTime
+  valid_until      DateTime
+  grace_ends_at    DateTime?
+  device_limit     Int      @default(2)
+  status           String   @default("active") // active, grace, expired, suspended, reactivated
+  created_at       DateTime
+  updated_at       DateTime
+  idempotency_key  String?  @unique
+
+  business         Business @relation(fields: [business_id], references: [id])
+}
+
+model ActivityLog {
+  id               String   @id
+  server_id        String?  @unique
+  business_id      String
+  user_id          String?
+  action           String
+  entity_type      String
+  entity_id        String?
+  details          String?
+  device_id        String?
+  created_at       DateTime
+  idempotency_key  String?  @unique
+
+  business         Business @relation(fields: [business_id], references: [id])
+}
+
+model PriceHistory {
+  id                          String   @id
+  server_id                   String?  @unique
+  business_id                 String
+  product_id                  String
+  field_changed               String   // 'selling_price', 'buying_price', 'cost_correction'
+  old_value_cents             Int
+  new_value_cents             Int
+  changed_by_user_id          String?
+  reason                      String?
+  created_at                  DateTime
+  idempotency_key             String?  @unique
+
+  business                    Business @relation(fields: [business_id], references: [id])
+  product                     Product  @relation(fields: [product_id], references: [id])
+}
